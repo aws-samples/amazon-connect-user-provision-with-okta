@@ -46,7 +46,7 @@ ROUTING_PROFILE_ID = 87654321-69fb-43b6-a5e6-f8666ac189cb # Bind routing profile
 INSTANCE_ID = abcdefgh-0122-4131-adc2-a0ebe5a2b2a7 # Your Amazon Connect Instance ID
 ```
 
-## Okta Event Hooks Sample
+## Okta Event Hooks sample
 ### User assigned to app (application.user_membership.add)
 ```
 {
@@ -199,12 +199,12 @@ INSTANCE_ID = abcdefgh-0122-4131-adc2-a0ebe5a2b2a7 # Your Amazon Connect Instanc
 * [Configure Single Sign-On for Amazon Connect Using Okta](https://aws.amazon.com/blogs/contact-center/configure-single-sign-on-for-amazon-connect-using-okta/)
 * [Okta Automations and hooks - Event hooks](https://help.okta.com/en-us/Content/Topics/automation-hooks/event-hooks-main.htm)
 
+## Reporting Bugs
+If you encounter a bug, please create a new issue with as much detail as possible and steps for reproducing the bug. See the [Contributing Guidelines](./CONTRIBUTING.md) for more details.
+
 ## Security
 
 See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
-
-## Reporting Bugs
-If you encounter a bug, please create a new issue with as much detail as possible and steps for reproducing the bug. See the [Contributing Guidelines](./CONTRIBUTING.md) for more details.
 
 ## License
 
