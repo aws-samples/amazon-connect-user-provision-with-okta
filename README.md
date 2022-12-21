@@ -203,11 +203,9 @@ INSTANCE_ID = abcdefgh-0122-4131-adc2-a0ebe5a2b2a7 # Your Amazon Connect Instanc
 
 See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
 
-## License
-
-This library is licensed under the MIT-0 License. See the LICENSE file.
-
 ## Reporting Bugs
 If you encounter a bug, please create a new issue with as much detail as possible and steps for reproducing the bug. See the [Contributing Guidelines](./CONTRIBUTING.md) for more details.
 
+## License
 
+This library is licensed under the MIT-0 License. See the LICENSE file.
