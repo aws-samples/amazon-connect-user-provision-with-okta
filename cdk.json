@@ -75,6 +75,7 @@
     "@aws-cdk/aws-lambda-nodejs:sdkV3ExcludeSmithyPackages": true,
     "@aws-cdk/aws-stepfunctions-tasks:fixRunEcsTaskPolicy": true,
 
+    "enable-auth": "false",
     "connect-security-profile-ids": "",
     "connect-routing-profile-id": "",
     "connect-instance-id": ""

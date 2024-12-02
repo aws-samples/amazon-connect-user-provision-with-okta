@@ -2,10 +2,13 @@ from aws_cdk import (
     Stack,
     aws_lambda as _lambda,
     aws_apigateway as apigw,
+    aws_secretsmanager as secretsmanager,
     aws_iam as iam,
-    CfnOutput
+    CfnOutput,
+    RemovalPolicy
 )
 from constructs import Construct
+import uuid
 
 class OktaConnectorStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
@@ -15,6 +18,7 @@ class OktaConnectorStack(Stack):
         security_profile_ids = self.node.try_get_context('connect-security-profile-ids')
         routing_profile_id = self.node.try_get_context('connect-routing-profile-id')
         instance_id = self.node.try_get_context('connect-instance-id')
+        enable_auth = self.node.try_get_context('enable-auth')
 
         # Validate required parameters
         if not all([security_profile_ids, routing_profile_id, instance_id]):
@@ -23,9 +27,23 @@ class OktaConnectorStack(Stack):
                 "connect-security-profile-ids, connect-routing-profile-id, and connect-instance-id"
             )
 
+        # Create API key secret if auth is enabled
+        api_key = None
+        api_key_secret = None
+        if enable_auth:
+            # Generate random API key
+            api_key = str(uuid.uuid4())
+
+            # Create secret in Secrets Manager
+            api_key_secret = secretsmanager.Secret(
+                self, 'ApiKeySecret',
+                secret_string=api_key,
+                removal_policy=RemovalPolicy.DESTROY  # 自動清理，視需求調整
+            )
+
         # Create Lambda function
         lambda_function = _lambda.Function(
-            self, 'OktaConnectFunction',
+            self, 'OktaConnectorFunction',
             runtime=_lambda.Runtime.PYTHON_3_9,
             handler='app.lambda_handler',
             code=_lambda.Code.from_asset('lambda'),
@@ -34,9 +52,15 @@ class OktaConnectorStack(Stack):
                 "CONNECT_SECURITY_PROFILE_IDS": security_profile_ids,
                 "CONNECT_ROUTING_PROFILE_ID": routing_profile_id,
                 "CONNECT_INSTANCE_ID": instance_id,
+                "SECRET_ARN": api_key_secret.secret_arn if enable_auth else ""
             }
         )
 
+        # Add Secrets Manager permissions if auth is enabled
+        if enable_auth:
+            api_key_secret.grant_read(lambda_function)
+
+        # Add Connect permissions
         lambda_function.add_to_role_policy(
             iam.PolicyStatement(
                 effect=iam.Effect.ALLOW,
@@ -52,7 +76,7 @@ class OktaConnectorStack(Stack):
         )
         # Setup API Gateway
         api = apigw.RestApi(
-            self, 'OktaConnectApi',
+            self, 'OktaConnectorApi',
             rest_api_name='Okta Integration API'
         )
 
@@ -66,19 +90,26 @@ class OktaConnectorStack(Stack):
         CfnOutput(
             self, "ApiUrl",
             value=f"{api.url}create_user",
-            description="API Gateway endpoint URL"
+            description="API Gateway endpoint URL for OKTA event hook"
         )
 
         CfnOutput(
             self, "LambdaArn",
             value=lambda_function.function_arn,
             description="Lambda function ARN",
-            export_name="OktaConnectLambdaArn"
+            export_name="OktaConnectorLambdaArn"
         )
 
         CfnOutput(
             self, "ApiId",
             value=api.rest_api_id,
             description="API Gateway ID",
-            export_name="OktaConnectApiId"
+            export_name="OktaConnectorApiId"
         )
+
+        if enable_auth:
+            CfnOutput(
+                self, "ApiKey",
+                value=api_key,
+                description="API Key (store securely)"
+            )

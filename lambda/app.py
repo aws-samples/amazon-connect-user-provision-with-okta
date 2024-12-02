@@ -25,6 +25,38 @@ ROUTING_PROFILE_ID = get_env_var('CONNECT_ROUTING_PROFILE_ID')
 # Initialize Amazon Connect client
 client = boto3.client('connect')
 
+# Add Secrets Manager client
+secrets_client = boto3.client('secretsmanager')
+
+
+async def validate_api_key(headers):
+    """Validate API key if authentication is enabled."""
+    enable_auth = os.getenv('SECRET_ARN', '').lower() == 'true'
+    if not enable_auth:
+        return True
+
+    api_key = headers.get('x-api-key')
+    if not api_key:
+        raise ValueError("Missing X-API-KEY header")
+
+    secret_arn = os.getenv('SECRET_ARN')
+    if not secret_arn:
+        raise EnvironmentError("SECRET_ARN not configured")
+
+    # Get API key from Secrets Manager
+    try:
+        secret = secrets_client.get_secret_value(SecretId=secret_arn)
+        stored_api_key = secret['SecretString']
+
+        if api_key != stored_api_key:
+            logger.error("invalid API key")
+            raise ValueError("Invalid API key")
+
+        return True
+    except Exception as e:
+        logger.error(f"Error validating API key: {str(e)}")
+        raise
+
 def lambda_handler(event, context):
     """
     Main handler for Lambda function
@@ -33,6 +65,16 @@ def lambda_handler(event, context):
     try:
         logger.info("Received event: %s", json.dumps(event))
         ## TODO: Handle authentication headers
+
+        # Validate API key if authentication is enabled
+        headers = event.get('headers', {})
+        try:
+            validate_api_key(headers)
+        except ValueError as e:
+            return invalid_authentication(e)
+        except Exception as e:
+            return internal_server_error(f"Authentication error: {str(e)}")
+
         # Determine HTTP method and route accordingly
         http_method = get_http_method(event)
         if http_method == "POST":
@@ -187,6 +229,10 @@ def user_info_parser(user_add_event):
 # Utility response functions
 def success_response(body):
     return {'statusCode': 200, 'body': json.dumps(body)}
+
+
+def invalid_authentication(message):
+    return {'statusCode': 401, 'body': json.dumps(message)}
 
 
 def client_error_response(message):
