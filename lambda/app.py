@@ -18,44 +18,12 @@ def get_env_var(var_name):
 # Read configurations from environment variables
 INSTANCE_ID = get_env_var('CONNECT_INSTANCE_ID')
 # Keep the flexibility to have multiple SECURITY_PROFILE_IDs
-SECURITY_PROFILE_IDS = get_env_var('CONNECT_SECURITY_PROFILE_ID').split(",")
+SECURITY_PROFILE_IDS = get_env_var('CONNECT_SECURITY_PROFILE_IDS').split(",")
 ROUTING_PROFILE_ID = get_env_var('CONNECT_ROUTING_PROFILE_ID')
 
 
 # Initialize Amazon Connect client
 client = boto3.client('connect')
-
-# Add Secrets Manager client
-secrets_client = boto3.client('secretsmanager')
-
-
-async def validate_api_key(headers):
-    """Validate API key if authentication is enabled."""
-    enable_auth = os.getenv('SECRET_ARN', '').lower() == 'true'
-    if not enable_auth:
-        return True
-
-    api_key = headers.get('x-api-key')
-    if not api_key:
-        raise ValueError("Missing X-API-KEY header")
-
-    secret_arn = os.getenv('SECRET_ARN')
-    if not secret_arn:
-        raise EnvironmentError("SECRET_ARN not configured")
-
-    # Get API key from Secrets Manager
-    try:
-        secret = secrets_client.get_secret_value(SecretId=secret_arn)
-        stored_api_key = secret['SecretString']
-
-        if api_key != stored_api_key:
-            logger.error("invalid API key")
-            raise ValueError("Invalid API key")
-
-        return True
-    except Exception as e:
-        logger.error(f"Error validating API key: {str(e)}")
-        raise
 
 def lambda_handler(event, context):
     """
@@ -64,16 +32,6 @@ def lambda_handler(event, context):
     """
     try:
         logger.info("Received event: %s", json.dumps(event))
-        ## TODO: Handle authentication headers
-
-        # Validate API key if authentication is enabled
-        headers = event.get('headers', {})
-        try:
-            validate_api_key(headers)
-        except ValueError as e:
-            return invalid_authentication(e)
-        except Exception as e:
-            return internal_server_error(f"Authentication error: {str(e)}")
 
         # Determine HTTP method and route accordingly
         http_method = get_http_method(event)
@@ -99,7 +57,7 @@ def lambda_handler(event, context):
 def get_http_method(event):
     """Extracts HTTP method from the event, raising KeyError if missing."""
     try:
-        return event['requestContext']['http'].get('method')
+        return event['httpMethod']
     except KeyError:
         raise KeyError("HTTP method not found in event")
 
@@ -112,34 +70,34 @@ def create_amazon_connect_user(event):
         if not users:
             raise ValueError("No valid user information found in data")
 
-        for user in users:
-            username = user['alternate_id']
-            first_name = user['fName']
-            last_name = user['lName']
+        user = users[0]
+        username = user['alternate_id']
+        first_name = user['fName']
+        last_name = user['lName']
 
-            # Check for duplicate user
-            if is_duplicate_user(username):
-                # Don't return error to the client, only log the duplicate user in logs.
-                logger.warning(f"User with username '{username}' already exists.")
+        # Check for duplicate user
+        if is_duplicate_user(username):
+            # Don't return error to the client, only log the duplicate user in logs.
+            logger.warning(f"User with username '{username}' already exists.")
+            return duplicate_user_error(f"User with username '{username}' already exists.")
 
-
-            # For the detailed parameters of creating user, you can refer the following document
-            # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/connect.html#Connect.Client.create_user
-            response = client.create_user(
-                Username=username,
-                IdentityInfo={
-                    'FirstName': first_name,
-                    'LastName': last_name
-                },
-                PhoneConfig={
-                    'PhoneType': 'SOFT_PHONE'
-                },
-                SecurityProfileIds=SECURITY_PROFILE_IDS,
-                RoutingProfileId=ROUTING_PROFILE_ID,
-                InstanceId=INSTANCE_ID
-            )
-            logger.info(f"Create UserId {response['UserId']} and UserArn {response['UserArn']}")
-            return success_response({'message': 'Connect user created successfully'})
+        # For the detailed parameters of creating user, you can refer the following document
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/connect.html#Connect.Client.create_user
+        response = client.create_user(
+            Username=username,
+            IdentityInfo={
+                'FirstName': first_name,
+                'LastName': last_name
+            },
+            PhoneConfig={
+                'PhoneType': 'SOFT_PHONE'
+            },
+            SecurityProfileIds=SECURITY_PROFILE_IDS,
+            RoutingProfileId=ROUTING_PROFILE_ID,
+            InstanceId=INSTANCE_ID
+        )
+        logger.info(f"Create UserId {response['UserId']} and UserArn {response['UserArn']}")
+        return success_response({'message': 'Connect user created successfully'})
 
     except ValueError as ve:
         logger.error(f"Data extraction error: {ve}")
@@ -237,6 +195,10 @@ def invalid_authentication(message):
 
 def client_error_response(message):
     return {'statusCode': 400, 'body': json.dumps({'error': message})}
+
+
+def duplicate_user_error(message):
+    return {'statusCode': 409, 'body': json.dumps({'error': message})}
 
 
 def method_not_allowed(method):
