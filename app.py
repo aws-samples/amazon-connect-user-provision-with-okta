@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from aws_cdk import App
-from okta_connector_app.okta_connector_stack import MyOktaConnectStack
+from okta_connector_app.okta_connector_stack import OktaConnectorStack
 
 app = App()
 
@@ -17,14 +17,6 @@ required_params = {
     'connect-instance-id': {
         'description': 'Connect instance ID',
         'example': 'd73493ae-0122-4131-adc2-a0ebe5a2b2a7'
-    },
-    'app-name': {
-        'description': 'Okta application name',
-        'example': 'AWS Account Federation'
-    },
-    'group-name': {
-        'description': 'Okta group name',
-        'example': 'amazon_connect'
     }
 }
 
@@ -64,5 +56,5 @@ if missing_params:
     raise ValueError(error_message)
 
 # Create the stack and synthesize the CloudFormation template
-MyOktaConnectStack(app, "MyOktaConnectStack")
+OktaConnectorStack(app, "OktaConnectorStack")
 app.synth()

@@ -75,8 +75,6 @@
     "@aws-cdk/aws-lambda-nodejs:sdkV3ExcludeSmithyPackages": true,
     "@aws-cdk/aws-stepfunctions-tasks:fixRunEcsTaskPolicy": true,
 
-    "okta-app-name": "AWS Account Federation",
-    "okta-group-name": "amazon_connect",
     "connect-security-profile-ids": "",
     "connect-routing-profile-id": "",
     "connect-instance-id": ""

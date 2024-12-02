@@ -7,13 +7,11 @@ from aws_cdk import (
 )
 from constructs import Construct
 
-class MyOktaConnectStack(Stack):
+class OktaConnectorStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         # Get parameters with default values
-        okta_app_name = self.node.try_get_context('okta-app-name')
-        okta_group_name = self.node.try_get_context('okta-group-name')
         security_profile_ids = self.node.try_get_context('connect-security-profile-ids')
         routing_profile_id = self.node.try_get_context('connect-routing-profile-id')
         instance_id = self.node.try_get_context('connect-instance-id')
@@ -32,12 +30,6 @@ class MyOktaConnectStack(Stack):
             handler='app.lambda_handler',
             code=_lambda.Code.from_asset('lambda'),
             environment={
-                # Okta configurations
-                "OKTA_APP_NAME": okta_app_name,
-                "OKTA_GROUP_NAME": okta_group_name,
-                "OKTA_APP_MEMBERSHIP_ADD_EVENT": "application.user_membership.add",
-                "OKTA_GROUP_MEMBERSHIP_ADD_EVENT": "group.user_membership.add",
-
                 # Connect configurations
                 "CONNECT_SECURITY_PROFILE_IDS": security_profile_ids,
                 "CONNECT_ROUTING_PROFILE_ID": routing_profile_id,
@@ -50,7 +42,7 @@ class MyOktaConnectStack(Stack):
                 effect=iam.Effect.ALLOW,
                 actions=[
                     "connect:CreateUser",
-                    "connect:DeleteUser"
+                    "connect:ListUsers"
                 ],
                 resources=[
                     # For CreateUser and DeleteUser operations
