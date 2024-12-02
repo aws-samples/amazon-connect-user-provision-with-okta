@@ -17,7 +17,8 @@ def get_env_var(var_name):
 
 # Read configurations from environment variables
 INSTANCE_ID = get_env_var('CONNECT_INSTANCE_ID')
-SECURITY_PROFILE_ID = get_env_var('CONNECT_SECURITY_PROFILE_ID')
+# Keep the flexibility to have multiple SECURITY_PROFILE_IDs
+SECURITY_PROFILE_IDS = get_env_var('CONNECT_SECURITY_PROFILE_ID').split(",")
 ROUTING_PROFILE_ID = get_env_var('CONNECT_ROUTING_PROFILE_ID')
 
 
@@ -31,6 +32,7 @@ def lambda_handler(event, context):
     """
     try:
         logger.info("Received event: %s", json.dumps(event))
+        ## TODO: Handle authentication headers
         # Determine HTTP method and route accordingly
         http_method = get_http_method(event)
         if http_method == "POST":
@@ -90,7 +92,7 @@ def create_amazon_connect_user(event):
                 PhoneConfig={
                     'PhoneType': 'SOFT_PHONE'
                 },
-                SecurityProfileIds=[SECURITY_PROFILE_ID],
+                SecurityProfileIds=SECURITY_PROFILE_IDS,
                 RoutingProfileId=ROUTING_PROFILE_ID,
                 InstanceId=INSTANCE_ID
             )
