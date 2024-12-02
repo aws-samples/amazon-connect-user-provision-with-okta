@@ -8,15 +8,15 @@ app = App()
 required_params = {
     'connect-security-profile-ids': {
         'description': 'Comma-separated security profile IDs',
-        'example': '27a6dbc8-4927-4ba9-abd8-0aa7f5b46852'
+        'example': '27a6dbc8-4927-4ba9-abd8-0aa7f5123456'
     },
     'connect-routing-profile-id': {
         'description': 'Routing profile ID',
-        'example': '6a0a6c65-69fb-43b6-a5e6-f8666ac189cb'
+        'example': '6a0a6c65-69fb-1234-abcd-f8666ac189cb'
     },
     'connect-instance-id': {
         'description': 'Connect instance ID',
-        'example': 'd73493ae-0122-4131-adc2-a0ebe5a2b2a7'
+        'example': 'd77493ae-0342-f5sv-adc2-a0ebe5a2b2a7'
     }
 }
 
