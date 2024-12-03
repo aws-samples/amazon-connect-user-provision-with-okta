@@ -16,13 +16,6 @@ class OktaConnectorStack(Stack):
         routing_profile_id = self.node.try_get_context('connect-routing-profile-id')
         instance_id = self.node.try_get_context('connect-instance-id')
 
-        # Validate required parameters
-        if not all([security_profile_ids, routing_profile_id, instance_id]):
-            raise ValueError(
-                "Missing required parameters. Please provide: "
-                "connect-security-profile-ids, connect-routing-profile-id, and connect-instance-id"
-            )
-
         # Create Lambda function
         lambda_function = _lambda.Function(
             self, 'OktaConnectorFunction',
