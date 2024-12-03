@@ -6,7 +6,7 @@ However, currently it doesn't support automatic user provisioning from Okta to A
 
 With this sample, customers who use Okta can easier refer this sample to implement the automatic user provisioning from Okta to Amazon Connect.
 
-![alt text](user_provisioing_flow.png "Provisioning users from Okta to Amazon Connect")
+![alt text](img/user_provisioing_flow.png "Provisioning users from Okta to Amazon Connect")
 ## Implementation
 
 To sync the users created in Okta to Amazon Connect, we need to leverage [Okta event hooks](https://help.okta.com/en-us/Content/Topics/automation-hooks/event-hooks-main.htm) to automatically provision users to Amazon Connect with mapping routing profile and security profiles to give the proper permissions to your agents.
@@ -39,13 +39,13 @@ chmod a+x bootstrap.sh start.sh
 ./bootstrap.sh
 ./start.sh
 ```
-![start_screenshoot.png](start_screenshoot.png)
-![deploy_successfully.png](deploy_successfully.png)
+![start_screenshoot.png](img/start_screenshoot.png)
+![deploy_successfully.png](img/deploy_successfully.png)
 
 ## OKTA Setup
 Copy the ``OktaConnectorStack.ApiUrl`` to OKTA console
-![okta_console_screenshot.png](okta_console_screenshot.png)
-![okta_one_time_verification.png](okta_one_time_verification.png)
+![okta_console_screenshot.png](img/okta_console_screenshot.png)
+![okta_one_time_verification.png](img/okta_one_time_verification.png)
 ## Configurations
 
 Change configs in the **cdk.json** to fit your Amazon Connect settings
