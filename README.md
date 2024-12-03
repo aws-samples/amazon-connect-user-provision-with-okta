@@ -16,11 +16,11 @@ This sample provides an AWS Lambda code which can be used to retrieve the event 
 ## Setup
 
 * [Configure Single Sign-On for Amazon Connect Using Okta](https://aws.amazon.com/blogs/contact-center/configure-single-sign-on-for-amazon-connect-using-okta/)
-* Clone this code and change the **config.ini**
 * Setup [Okta event hooks](https://help.okta.com/en-us/Content/Topics/automation-hooks/event-hooks-main.htm)
 * Subscribe specific [Okta events](https://developer.okta.com/docs/reference/api/event-types/)
   * `application.user_membership.add`
   * `group.user_membership.add`
+* Get `SECURITY_PROFILE_IDS`, `ROUTING_PROFILE_ID` and `INSTANCE_ID` from Amazon Connect Console
 * Deploy this Lambda and create your own Amazon API Gateway endpoint to integrate with this Lambda function
   * The execution role of this Lambda must have the permissions (such as `AmazonConnect_FullAccess`) to call Amazon Connect `Create User` API
     * You can refer [Required permissions for custom IAM policies on Amazon Connect](https://docs.aws.amazon.com/connect/latest/adminguide/security-iam-amazon-connect-permissions.html) to narrow down the permissions for creating users on Amazon Connect
@@ -30,20 +30,36 @@ This sample provides an AWS Lambda code which can be used to retrieve the event 
 * Use the API Gateway endpoint to pass [One-Time Okta Verification Request](https://developer.okta.com/docs/concepts/event-hooks/#one-time-verification-request)
 * You can start to add agents into your Okta Amazon Connect App and sync the user to Amazon Connect
 
+
+## CDK Deployment
+```
+git clone git@github.com:aws-samples/amazon-connect-user-provision-with-okta.git
+cd amazon-connect-user-provision-with-okta
+chmod a+x bootstrap.sh start.sh
+./bootstrap.sh
+./start.sh
+```
+![start_screenshoot.png](start_screenshoot.png)
+![deploy_successfully.png](deploy_successfully.png)
+
+## OKTA Setup
+Copy the ``OktaConnectorStack.ApiUrl`` to OKTA console
+![okta_console_screenshot.png](okta_console_screenshot.png)
+![okta_one_time_verification.png](okta_one_time_verification.png)
 ## Configurations
 
-Change configs in the **config.ini** to fit your Amazon Connect and Okta settings
+Change configs in the **cdk.json** to fit your Amazon Connect settings
 
 ```[OKTA]
-APP_NAME = AWS Account Federation  # Your Amazon Connect application name in Okta
-GROUP_NAME = amazon_connect # The user group ties to your Amazon Connect Application
-APP_MEMBERSHIP_ADD_EVENT = application.user_membership.add # Membership evet of User provisioning to app
-GROUP_MEMBERSHIP_ADD_EVENT = group.user_membership.add # Membership event of adding user to user group
+ "connect-security-profile-ids": "12345678-1234-2345-abd8-0aa7f5b46852, 65345678-1234-2345-abd8-0aa7f5b46852, 98345678-1234-2345-abd8-0aa7f5b46852, # Bind security profile to the provisioning agents
+ "connect-routing-profile-id": "87654321-69fb-43b6-a5e6-f8666ac189cb", # Bind routing profile to provisioning agents
+ "connect-instance-id": "abcdefgh-0122-4131-adc2-a0ebe5a2b2a7" # Your Amazon Connect Instance ID
+```
 
-[Connect]
-SECURITY_PROFILE_IDS = 12345678-1234-2345-abd8-0aa7f5b46852, 65345678-1234-2345-abd8-0aa7f5b46852, 98345678-1234-2345-abd8-0aa7f5b46852 # Bind security profile to the provisioning agents
-ROUTING_PROFILE_ID = 87654321-69fb-43b6-a5e6-f8666ac189cb # Bind routing profile to provisioning agents
-INSTANCE_ID = abcdefgh-0122-4131-adc2-a0ebe5a2b2a7 # Your Amazon Connect Instance ID
+## Clean up
+```
+cd amazon-connect-user-provision-with-okta
+cdk destroy
 ```
 
 ## Okta Event Hooks sample
