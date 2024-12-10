@@ -1,216 +1,79 @@
-## Automatic User Provisioning from Okta to Amazon Connect
+## Automate Amazon Connect Agent Onboarding Using Okta
 
-Amazon Connect is a cloud-based contact center solution that provides businesses with a set of tools to interact with your customers. Amazon Connect supports SAML 2.0-based authentication to  simplify the process of managing user access to applications and resources, and the employees don't need to remember multiple usernames and passwords, making it easier for them to access the resources they need. Okta is a popular identity and access management solution that many customers may choose inside their organizations and use it to integrate with Amazon Connect. AWS has blog and workshop to guide you how to setup your Amazon Connect instance with OKTA step by step.
+Efficient agent onboarding is critical for the success of modern contact centers, where staffing changes are frequent due to business needs, seasonal demands, and specialized skills. Automating agent provisioning can reduce errors, enhance security, and speed up the onboarding process. This integration enables automatic agent provisioning, ensuring accuracy, compliance, and streamlined onboarding through an architecture that leverages Okta Web Hooks, AWS Lambda, Amazon API Gateway and Amazon Connect.
 
-However, currently it doesn't support automatic user provisioning from Okta to Amazon Connect. That means even when you add users into your applications on Okta, and you still needs to manually create those users on Amazon Connect or upload the user list through a Amazon Connect [csv template](https://docs.aws.amazon.com/connect/latest/adminguide/user-management.html#add-users-in-bulk).
+![alt text](img/okta.drawio.png "Solution architecture – Agent provisioning from 1 through 4.")
 
-With this sample, customers who use Okta can easier refer this sample to implement the automatic user provisioning from Okta to Amazon Connect.
-
-![alt text](img/user_provisioing_flow.png "Provisioning users from Okta to Amazon Connect")
-## Implementation
-
-To sync the users created in Okta to Amazon Connect, we need to leverage [Okta event hooks](https://help.okta.com/en-us/Content/Topics/automation-hooks/event-hooks-main.htm) to automatically provision users to Amazon Connect with mapping routing profile and security profiles to give the proper permissions to your agents.
-
-This sample provides an AWS Lambda code which can be used to retrieve the event hooks from Okta and implements the [initial event hook verification](initial event hook verification) when the first time you setup event hook on your Okta org and the logic to create the users on Amazon Connect.
-
-## Setup
-
+## How it works
+1.	An agent is added to the Amazon Connect group in Okta.
+2.	Adding the agent to the Amazon Connect Agents group triggers an [Event Hook in Okta](https://help.okta.com/en-us/Content/Topics/automation-hooks/event-hooks-main.htm), sending the agent details to the Amazon API Gateway.
+3.	Amazon API Gateway calls the AWS Lambda function to process the request.
+4.	The Lambda function uses the agent details to create the agent in Amazon Connect using [CreateUser API](https://docs.aws.amazon.com/connect/latest/APIReference/API_CreateUser.html).
+## Deployment
+### Deploy Web Hook API
 * [Configure Single Sign-On for Amazon Connect Using Okta](https://aws.amazon.com/blogs/contact-center/configure-single-sign-on-for-amazon-connect-using-okta/)
-* Setup [Okta event hooks](https://help.okta.com/en-us/Content/Topics/automation-hooks/event-hooks-main.htm)
-* Subscribe specific [Okta events](https://developer.okta.com/docs/reference/api/event-types/)
-  * `application.user_membership.add`
-  * `group.user_membership.add`
-* Get `SECURITY_PROFILE_IDS`, `ROUTING_PROFILE_ID` and `INSTANCE_ID` from Amazon Connect Console
-* Deploy this Lambda and create your own Amazon API Gateway endpoint to integrate with this Lambda function
-  * The execution role of this Lambda must have the permissions (such as `AmazonConnect_FullAccess`) to call Amazon Connect `Create User` API
-    * You can refer [Required permissions for custom IAM policies on Amazon Connect](https://docs.aws.amazon.com/connect/latest/adminguide/security-iam-amazon-connect-permissions.html) to narrow down the permissions for creating users on Amazon Connect
-  * Create API Gateway resource with GET/POST method for your endpoint
-    * `GET` method - for One-Time Okta Verification Request
-    * `POST` method - for handling Okta membership event hook
-* Use the API Gateway endpoint to pass [One-Time Okta Verification Request](https://developer.okta.com/docs/concepts/event-hooks/#one-time-verification-request)
-* You can start to add agents into your Okta Amazon Connect App and sync the user to Amazon Connect
-
-
-## CDK Deployment
+* Before you begin CDK deployment, ensure you have the following IDs ready: [Amazon Connect Instance ID](https://docs.aws.amazon.com/connect/latest/adminguide/find-instance-arn.html), [Security Profile ID](https://docs.aws.amazon.com/cli/latest/reference/connect/list-security-profiles.html), and [Routing Profile ID](https://docs.aws.amazon.com/cli/latest/reference/connect/list-routing-profiles.html). 
+* Run the following commands to start CDK deployment 
 ```
-git clone git@github.com:aws-samples/amazon-connect-user-provision-with-okta.git
+git clone https://github.com/aws-samples/amazon-connect-user-provision-with-okta.git
 cd amazon-connect-user-provision-with-okta
-chmod a+x bootstrap.sh start.sh
+chmod a+x bootstrap.sh start.sh cleanup.sh
 ./bootstrap.sh
 ./start.sh
 ```
 ![start_screenshoot.png](img/start_screenshoot.png)
 ![deploy_successfully.png](img/deploy_successfully.png)
+Copy the `OktaConnectorStack.ApiUrl` value from the final output after the execution completes. This URL will act as the endpoint for your Okta Event Hook.
 
-## OKTA Setup
-Copy the ``OktaConnectorStack.ApiUrl`` to OKTA console
-![okta_console_screenshot.png](img/okta_console_screenshot.png)
-![okta_one_time_verification.png](img/okta_one_time_verification.png)
-## Configurations
+### Configure Okta Group and Application Assignment 
+* **Log in to the Okta Admin Console.** - Access your [Okta Admin Console dashboard](https://login.okta.com/) using your admin credentials.
+* **Navigate to the Groups Menu.** Go to the **Directory** section and Click on the **Groups** menu.
+* **Create a New Group.** Click the **Add Group** button, in the form that appears: Enter a Name: Amazon Connect Agents. Optionally, add a Description. Click **Save** to create the group.
+* **Navigate to Groups** and click on the newly created **Amazon Connect Agents** group.
+* **Assign the Amazon Connect Application.** Click the **Assign Applications button**, from the list of available applications, select **Amazon Connect**. 
+* During assignment, select the **Okta_Role** option. Click **Save and Go Back** to complete the process. 
 
-Change configs in the **cdk.json** to fit your Amazon Connect settings
+### Configure Okta Web Hook 
 
-```[OKTA]
- "connect-security-profile-ids": "12345678-1234-2345-abd8-0aa7f5b46852, 65345678-1234-2345-abd8-0aa7f5b46852, 98345678-1234-2345-abd8-0aa7f5b46852, # Bind security profile to the provisioning agents
- "connect-routing-profile-id": "87654321-69fb-43b6-a5e6-f8666ac189cb", # Bind routing profile to provisioning agents
- "connect-instance-id": "abcdefgh-0122-4131-adc2-a0ebe5a2b2a7" # Your Amazon Connect Instance ID
+* **Navigate to the Setting Menu**. Go to the **Features Menu** and enable **Event Hook Filtering**.
+* **Navigate to the Workflow Menu**. Go to the **Even Hooks** section and Click **Create Event Hook**.
+![event-hook-verify.png](img/event-hook-verify.png)
+* Complete these fields:
 ```
+Endpoint URL: Enter the endpoint URL (OktaConnectorStack.ApiUrl output that was provided during CDK deployment)
+Event Hook name: Enter a unique name for the event hook.
+Description: Enter the purpose and a description of the event hook.
+Select Events: Select User added to group option form dropdown menu.
+```
+* Click **Save & Continue**.
+* Select the **Apply Filter option**, then click on the **Use Okta Expression Language (Advanced) link**. 
+* Next, paste the following expression language into the provided field: `event.target.?[type eq 'UserGroup' && displayName eq 'Amazon Connect Agents'].size()> 0` and click **Save**.
+![event-hook-enable-filter.png](img/event-hook-enable-filter.png)
+* To activate the hook, verify endpoint ownership by clicking the **Verify button**. You should receive successful verification message. 
+
+![activate.png](img/activate.png)
+
+
+ ### Testing
+*  **Log in to the Okta Admin Console.** - Access your [Okta Admin Console dashboard](https://login.okta.com/) using your admin credentials.
+*  **Navigate to the People Menu**. Go to the **Directory** section and Click on the **People** menu.
+* Click the **Add Person button**, complete the **Add Person form**, and then click **Save**.
+* **Navigate to the Groups Menu**. Go to the **Directory** section and Click on the **Groups** menu.
+* Select **Amazon Connect Agents group** and click on **Assign people** button. Select user you just created by clicking on the **+** sign. 
+* Login to your Amazon Connect instance. 
+* In the left-hand navigation pane, go to **Users** and select **User Management**. You should now see that the agent created in Okta has been automatically provisioned in Amazon Connect. 
+
+![connect-user.png](img/connect-user.png)
 
 ## Clean up
 ```
-cd amazon-connect-user-provision-with-okta
-cdk destroy
-```
-
-## Okta Event Hooks sample
-### User assigned to app (application.user_membership.add)
-```
-{
-    "eventType": "com.okta.event_hook",
-    "eventTypeVersion": "1.0",
-    "cloudEventsVersion": "0.1",
-    "source": "https://dev-51269148.okta.com/api/v1/eventHooks/who76u07z3iS7dl2P5d7",
-    "eventId": "ffe9af67-e56c-4229-b6c9-96f66ed382f1",
-    "data": {
-        "events": [
-            {
-                "uuid": "4a19d863-4e0e-4645-bce4-2850f783a55f",
-                "published": "2022-12-21T13:47:07.306Z",
-                "eventType": "application.user_membership.add",
-                "version": "0",
-                "displayMessage": "Add user to application membership.",
-                "severity": "INFO",
-                "client": {
-                    "userAgent": {
-                        "rawUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:107.0) Gecko/20100101 Firefox/107.0",
-                        "os": "Mac OS X",
-                        "browser": "FIREFOX"
-                    },
-                    "zone": null,
-                    "device": "Computer",
-                    "id": null,
-                    "ipAddress": "27.0.3.153",
-                    "geographicalContext": {
-                        "city": "Tokyo",
-                        "state": "Tokyo",
-                        "country": "Japan",
-                        "postalCode": "151-0053",
-                        "geolocation": {
-                            "lat": 35.6893,
-                            "lon": 139.6899
-                        }
-                    },
-                    "ipChain": null
-                },
-                "device": null,
-                "actor": null,
-                "outcome": {
-                    "result": "Success",
-                    "reason": null
-                },
-                "target": null,
-                "transaction": {
-                    "type": null,
-                    "id": "Y6MOW1BKZOMCPY-0KuwaPAAADLo",
-                    "detail": null
-                },
-                "debugContext": null,
-                "legacyEventType": "app.generic.provision.assign_user_to_app",
-                "authenticationContext": {
-                    "authenticationProvider": null,
-                    "credentialProvider": null,
-                    "credentialType": null,
-                    "issuer": null,
-                    "authenticationStep": 0,
-                    "externalSessionId": null,
-                    "interface": null
-                },
-                "securityContext": null,
-                "insertionTimestamp": null
-            }
-        ]
-    },
-    "eventTime": "2022-12-21T13:47:07.354Z",
-    "contentType": "application/json"
-}
-```
-
-### User added to group (group.user_membership.add)
-
-```
-{
-    "eventType": "com.okta.event_hook",
-    "eventTypeVersion": "1.0",
-    "cloudEventsVersion": "0.1",
-    "source": "https://dev-51269148.okta.com/api/v1/eventHooks/who76u07z3iS7dl2P5d7",
-    "eventId": "0d6c348d-a771-49dd-9eb7-655167f26501",
-    "data": {
-        "events": [
-            {
-                "uuid": "def83a9d-9487-42bf-b6ae-de748ebdb19c",
-                "published": "2022-12-21T13:48:32.767Z",
-                "eventType": "group.user_membership.add",
-                "version": "0",
-                "displayMessage": "Add user to group membership.",
-                "severity": "INFO",
-                "client": {
-                    "userAgent": {
-                        "rawUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:107.0) Gecko/20100101 Firefox/107.0",
-                        "os": "Mac OS X",
-                        "browser": "FIREFOX"
-                    },
-                    "zone": null,
-                    "device": "Computer",
-                    "id": null,
-                    "ipAddress": "27.0.3.153",
-                    "geographicalContext": {
-                        "city": "Tokyo",
-                        "state": "Tokyo",
-                        "country": "Japan",
-                        "postalCode": "151-0053",
-                        "geolocation": {
-                            "lat": 35.6893,
-                            "lon": 139.6899
-                        }
-                    },
-                    "ipChain": null
-                },
-                "device": null,
-                "actor": null,
-                "outcome": {
-                    "result": "Success",
-                    "reason": null
-                },
-                "target": null,
-                "transaction": {
-                    "type": null,
-                    "id": "Y6MOsB1cPd-I1i0pJYAp3QAADyM",
-                    "detail": null
-                },
-                "debugContext": null,
-                "legacyEventType": "core.user_group_member.user_add",
-                "authenticationContext": {
-                    "authenticationProvider": null,
-                    "credentialProvider": null,
-                    "credentialType": null,
-                    "issuer": null,
-                    "authenticationStep": 0,
-                    "externalSessionId": null,
-                    "interface": null
-                },
-                "securityContext": null,
-                "insertionTimestamp": null
-            }
-        ]
-    },
-    "eventTime": "2022-12-21T13:48:32.813Z",
-    "contentType": "application/json"
-}
+In your terminal, move into the root directory cd amazon-connect-user-provision-with-okta
+Run ./cleanup.sh command 
+Optionally, remove Web Hook from Okta
 ```
 
 ## Reference
-
-* [Amazon Connect Boto3 document(Python)](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/connect.html#Connect.Client.create_user)
+* [Amazon Connect Boto3 document(Python)](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/connect.html)
 * [Amazon Connect API reference](https://docs.aws.amazon.com/connect/latest/APIReference/Welcome.html)
 * [Configure Single Sign-On for Amazon Connect Using Okta](https://aws.amazon.com/blogs/contact-center/configure-single-sign-on-for-amazon-connect-using-okta/)
 * [Okta Automations and hooks - Event hooks](https://help.okta.com/en-us/Content/Topics/automation-hooks/event-hooks-main.htm)
