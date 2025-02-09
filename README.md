@@ -1,4 +1,4 @@
-## Automate Amazon Connect Agent Onboarding Using Okta
+## Automate agent onboarding with Amazon Connect using Okta
 
 Efficient agent onboarding is critical for the success of modern contact centers, where staffing changes are frequent due to business needs, seasonal demands, and specialized skills. Automating agent provisioning can reduce errors, enhance security, and speed up the onboarding process. This integration enables automatic agent provisioning, ensuring accuracy, compliance, and streamlined onboarding through an architecture that leverages Okta Web Hooks, AWS Lambda, Amazon API Gateway and Amazon Connect.
 
